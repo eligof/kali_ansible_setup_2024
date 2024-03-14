@@ -1,0 +1,131 @@
+---
+# Metasploit
+- name: Enable Postgresql service
+  ignore_errors: yes
+  ansible.builtin.systemd:
+    name: postgresql.service
+    state: started
+    enabled: true
+
+- name: Check msfdb status
+  ignore_errors: yes
+  ansible.builtin.command: msfdb status
+  register: msfdb_status
+  changed_when: false
+
+- name: Initialize msfdb
+  ignore_errors: yes
+  ansible.builtin.command: msfdb init
+  when: "'No configuration file found' in msfdb_status.stdout"
+
+# OpenSSL
+- name: Configure OpenSSL
+  ansible.builtin.lineinfile:
+    path: /etc/ssl/openssl.cnf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - regexp: "^MinProtocol ="
+      line: "MinProtocol = None"
+    - regexp: "^CipherStrings ="
+      line: "CipherStrings = DEFAULT"
+
+# ZSH Theme
+# Install Icons
+
+- name: Ensure fonts directory exists
+  file:
+    path: "/home/{{ user }}/.fonts"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    state: directory
+
+# - name: Install MesloLGS NF fonts
+#   ansible.builtin.get_url:
+#     url: "{{ item.url }}"
+#     dest: "{{ item.dest }}"
+#     owner: "{{ user }}"
+#     group: "{{ user }}"
+#     mode: 0644
+#   loop: "{{ fonts }}"
+
+# - name: rebuild system font cache
+#   ansible.builtin.shell: fc-cache -f -v
+
+- name: Touch zshhistory
+  ansible.builtin.file:
+    state: touch
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    path: /home/{{user}}/.cache/zshhistory
+
+# - name: Git clone Powerlevel10k
+#   shell: |
+#     git config --global --add safe.directory /home/kali/powerlevel10k
+#     git clone https://github.com/romkatv/powerlevel10k.git /home/{{user}}/powerlevel10k
+#   environment:
+#     HOME: "/home/{{user}}"
+
+# - name: Git clone Powerlevel10k
+#   git:
+#     repo: https://github.com/romkatv/powerlevel10k.git
+#     dest: /home/{{user}}/powerlevel10k
+#     depth: 1
+#     update: yes
+#     force: yes
+
+# - name: Echo powerlvl10k zsh theme to zshrc - User
+#   ansible.builtin.shell: echo 'source /home/{{user}}/powerlevel10k/powerlevel10k.zsh-theme' >> ~/.zshrc
+#   become: true
+#   become_user: "{{ user }}"
+
+# - name: Echo powerlvl10k zsh theme to zshrc - Root
+#   ansible.builtin.shell: echo 'source /home/{{user}}/powerlevel10k/powerlevel10k.zsh-theme' >> ~/.zshrc
+
+
+# Tmux
+- name: Set .tmux.conf settings
+  ansible.builtin.template:
+    src: templates/home/kali/.tmux.conf.j2
+    dest: /home/{{ user }}/.tmux.conf
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Ensure .tmux directory exists
+  file:
+    path: "/home/{{ user }}/.tmux/"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    state: directory
+
+- name: Ensure tmux plugins directory exists
+  file:
+    path: "/home/{{ user }}/.tmux/plugins/"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    state: directory
+
+- name: Install TPM to handle tmux tmux-plugins
+  ansible.builtin.shell: git clone https://github.com/tmux-plugins/tpm /home/{{ user }}/.tmux/plugins/tpm
+  become: true
+  become_user: "{{ user }}"
+  ignore_errors: true
+
+
+
+# Change directory ownerships
+- name: Recursively change ownership of the ~/powerlevel10k directory
+  ansible.builtin.file:
+    path: /home/{{ user }}/powerlevel10k
+    state: directory
+    recurse: yes
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+# - name: Recursively change ownership of the /opt directory
+#   ansible.builtin.file:
+#     path: /opt
+#     state: directory
+#     recurse: yes
+#     owner: "{{ user }}"
+#     group: "{{ user }}"

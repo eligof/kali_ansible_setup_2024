@@ -1,0 +1,31 @@
+---
+# Installing the required Kali Linux, Python and Ruby packages
+- name: Install Kali packages, may take some time, DONT PANIC!
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+
+- name: Install Python Pip Packages
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    state: latest
+    executable: pip3
+  loop: "{{ python_pip_packages }}"
+
+- name: Install Ruby Gem Packages
+  community.general.gem:
+    name: "{{ item }}"
+    state: latest
+    user_install: false
+  loop: "{{ ruby_gem_packages }}"
+
+- name: "Updating apt repo/cache"
+  apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+  become: true
+  become_method: sudo
+
+- name: "Upgrade all packages"
+  apt: upgrade=yes force_apt_get=yes
+  become: true
+  become_method: sudo
+  
